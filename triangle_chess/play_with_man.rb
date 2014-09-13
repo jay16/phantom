@@ -1,43 +1,29 @@
 #encoding: utf-8
 require "./triangle_chess.rb"
 
-def take_step(step)
-  step.each do |piece|
-    x, y = *piece
-    count = @step_record.count
-
-    info = "(#{(count.odd? ? '机' : '人')}.#{count})"
-
-    @board[x][y] = info
-  end
-end
-@best_step = []
-@step_record = []
-@board = chess_board()
-print_board(@board)
+chess = TriangleChess.new(4)
+puts "初始化棋盘:"
+chess.print_board
 loop do
-  count = @step_record.count
+  count = chess.step_record.count
+  puts "count:#{count}"
 
   if count.odd?
     puts "机器人走法:"
 
     btime = Time.now
-    score = search(copy_array(@board), 0)
+    score = chess.search
     tlast = ((Time.now.to_f - btime.to_f) * 1000).to_i
-    step = @best_step.map { |item| item.reverse! }
+    step = chess.best_step
     printf("计算耗时[%sms]\n", tlast)
   else
-    puts "请输入第#{count}步走法?" 
-    STDOUT.flush 
-    input = gets.chomp 
-    step = input.split(/\s/).map { |key| @human_map[key] }
+    step = chess.player_input_step
   end
 
-  take_step(step)
-  @step_record.push(step)
+  chess.take_step(step)
 
   puts "第#{count}走法:"
-  print_board(@board)
+  chess.print_board
 
-  break if is_game_over(@board)
+  break if chess.is_game_over
 end
