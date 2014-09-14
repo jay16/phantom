@@ -1,7 +1,7 @@
 #encoding: utf-8
 require "./triangle_chess.rb"
 
-chess = TriangleChess.new(4)
+chess = TriangleChess.new(5)
 puts "初始化棋盘:"
 chess.print_board
 loop do
@@ -25,5 +25,5 @@ loop do
   puts "第#{count}走法:"
   chess.print_board
 
-  break if chess.is_game_over
+  break if chess.is_game_over?
 end

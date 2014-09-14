@@ -2,166 +2,176 @@
 
 class TriangleChess
   HH = %w[~ ! @ # $ % ^ & * ? : - + = _ | \ { } < >]
+  CONTINUE_MAX = 3
   attr_accessor :board, :step_record, :best_step, :human_map, :piece_map
 
   def initialize(board_width = 3)
     @piece_map    = []
+    @piece_used   = []
     @human_map    = {}
     @best_step    = []
     @step_record  = []
-    @board        = chess_board(board_width)
+    @board_width  = board_width || 3
+    @board        = chess_board
   end
 
   # 复制棋盘
-  def copy_array(board)
+  def _copy_array(board)
     Marshal.load(Marshal.dump(board))
   end
 
   # 三角棋盘
-  def chess_board(board_width)
-    real_width = board_width * 2 - 1
+  def chess_board
+    real_width = @board_width * 2 - 1
     real_board = Array.new(real_width) { Array.new(real_width, " ") }
-    init_board(real_board, board_width - 1, 0)
+    init_board(real_board, 0, @board_width - 1)
   end
 
   # 三角棋盘本质还是方形棋盘
-  def init_board(board, x, y, level = 1)
-    x.downto(x + 1 - (board.length-x)).each_with_index do |_x, _index|
+  #  x
+  #  |_ y
+  #  step1
+  #         [0,3]
+  #      [1,2] 
+  #   [2,1] 
+  #[3,0] 
+  #  step2
+  #         [0,3]
+  #      [1,2] [1,4]
+  #   [2,1] [2,3] 
+  #[3,0] [3,2] 
+  #  step3
+  #         [0,3]
+  #      [1,2] [1,4]
+  #   [2,1] [2,3] [2,5]
+  #[3,0] [3,2] [3,4]
+  #  step4
+  #         [0,3]
+  #      [1,2] [1,4]
+  #   [2,1] [2,3] [2,5]
+  #[3,0] [3,2] [3,4] [3,6]
+  def init_board(board = @board, x = 0, y = @board_width - 1, level = 1)
+    _board = _copy_array(board)
+    x.upto(@board_width - 1).each_with_index do |_x, _index|
       _y = x + y - _x
-      board[_y][_x] = @human_map.count
-      @human_map[@human_map.count.to_s] = [_y, _x]
+      _board[_x][_y] = @human_map.count
+      @human_map[@human_map.count.to_s] = [_x, _y]
       @piece_map.push([_x,_y])
     end
 
-    if x == board.length - 1
-      return board
+    if x == @board_width - 1 
+      return _board
     else
-      init_board(copy_array(board), x + 1, y + 1, level + 1)
+      init_board(_board, x + 1, y + 1, level + 1)
     end
   end
 
   def print_board(board = @board)
-    puts "="*@board.length*2
+    puts "=" * @board.length * 2
     board.to_a.each_with_index do |row, index| 
-      puts row.join(" ") + " "*8 + print_step_info(index)
+      puts row.join(" ") + " " * 8 + print_step_info(index)
     end
   end
 
   def print_step_info(index)
     if not @step_record.empty? and index <= @step_record.length - 1
       "step#{index}: #{HH[index]}"
-    else
-      ""
-    end
+    end || ""
+  end
+
+  def _is_piece_available(board = @board, piece)
+    x, y = *piece
+    board[x][y].is_a?(Fixnum)
   end
 
   def _push_gen(gen, piece)
     if gen.empty?
       gen.push([piece])
-    else
-      _last = copy_array(gen.last)
+    elsif gen.length < 3
+      _last = _copy_array(gen.last)
       gen.push(_last.push(piece))
     end
   end
 
   # count available step
+  #  x
+  #  |_ y
+  #         [0,3]
+  #      [1,2] [1,4]
+  #   [2,1] [2,3] [2,5]
+  #[3,0] [3,2] [3,4] [3,6]
+  #
   def move_gen(gen, board = @board, index = 0)
-    piece = @piece_map[index]
-    x, y  = *piece
-
-    _is_continue   = true
-    _max_continue  = 3
-    _continue_time = 1
+    _board = _copy_array(board)
+    _piece_available = @piece_map - @piece_used
+    _piece = _piece_available.at(index)
+    x, y   = *_piece
 
     # left-down
     _gen1 = []
-    _continue_time = 1
-    y.upto(board.length).each do |_y|
-      break if _continue_time > _max_continue
+    # [0,3] -> [1,2] -> [2,1] -> [3,0]
+    x.upto(@board_width - 1).each do |_x|
+      _piece = [_x, x + y - _x]
+      break if not _is_piece_available(_board, _piece)
 
-      _piece = [x + y - _y, _y]
-      if @piece_map.include?(_piece) and _is_continue
-        if board[_y][x + y - _y].is_a?(Fixnum)
-          _push_gen(_gen1, _piece) 
-          _continue_time += 1
-        end
-      else
-        _is_continue = false
-        next
-      end
+      _push_gen(_gen1, _piece) 
     end
 
     # horizontal
     _gen2 = []
-    _continue_time = 0
-    x.upto(board.length).each do |_x|
-      break if _continue_time > _max_continue
+    # [3, 0] -> [3, 2] -> [3, 4] -> [3, 6]
+    y.upto(@board_width * 2).each do |_y|
+      _piece = [x, _y]
+      break if not _is_piece_available(_board, _piece)
 
-      _piece = [_x, y]
-      if @piece_map.include?(_piece) and _is_continue
-        if board[y][_x].is_a?(Fixnum)
-          _push_gen(_gen2, _piece) 
-          _continue_time += 1
-        end
-      else
-        _is_continue = false
-        next
-      end
+      _push_gen(_gen2, _piece) 
     end
 
     # right-down
     _gen3 = []
-    _continue_time = 0
-    x.upto(board.length).each do |_x|
-      break if _continue_time > _max_continue
-
+    # [0,3] -> [1,4] -> [2,5] -> [3,6]
+    x.upto(@board_width).each do |_x|
       _piece = [_x, y - x + _x]
-      if @piece_map.include?(_piece) and _is_continue
-        if board[y - x + _x][_x].is_a?(Fixnum)
-          _push_gen(_gen3, _piece) 
-          _continue_time += 1
-        end
-      else
-        _is_continue = false
-        next
-      end
+      break if not _is_piece_available(_board, _piece)
+
+      _push_gen(_gen3, _piece) 
     end
 
     gen = (gen + _gen1 + _gen2 + _gen3).uniq
 
-    if index == @piece_map.length - 1
+    if _piece_available.empty? or index == _piece_available.count - 1
       return gen
     else
-      move_gen(gen, copy_array(board),index + 1)
+      move_gen(gen, _board,index + 1)
     end
   end
 
-  def is_game_over(board = @board)
+  def is_game_over?(board = @board)
     board.flatten.uniq.find_all { |item| item.is_a?(Fixnum) }.empty?
   end
 
-  def search(board = copy_array(@board), level = 0)
-    _board = copy_array(board)
-    steps = move_gen([], board, 0)
+  def search(board = @board, level = 0)
+    _board = _copy_array(board)
+    steps = move_gen([], _board, 0)
     scores = Array.new(steps.length)
     steps.each_with_index do |step, index|
       step.each do |piece|
         x, y = *piece
-        board[y][x] = [(index.even? ? "even" : "odd"),index].join
+        _board[x][y] =  "+"
       end
-      if is_game_over(board)
+      if is_game_over?(_board)
         scores[index] = (level.even? ? -1 : +1) * 100
       else
-        scores[index] = search(copy_array(board), level + 1)
+        scores[index] = search(_board, level + 1)
       end
-      board = copy_array(_board)
+      board = _copy_array(_board)
     end
 
     if level.even?
       max = scores.max
       scores.each_with_index do |score, index|
         if level == 0 and score == max
-          @best_step = steps[index].map { |item| item.reverse! }
+          @best_step = steps[index]#.map { |item| item.reverse! }
           break
         end
       end
@@ -170,7 +180,7 @@ class TriangleChess
       min = scores.min
       scores.each_with_index do |score, index|
         if level == 0 and score == min
-          @best_step = steps[index].map { |item| item.reverse! }
+          @best_step = steps[index]#.map { |item| item.reverse! }
           break
         end
       end
@@ -183,6 +193,7 @@ class TriangleChess
     step.each do |piece|
       x, y = *piece
       @board[x][y] = HH.at(@step_record.count - 1)
+      @piece_used.push(piece)
     end
   end
 
@@ -231,8 +242,3 @@ class TriangleChess
   end
 end
 
-#chess = TriangleChess.new(3)
-#chess.print_board
-#puts chess.is_game_over
-#puts chess.print_board(chess.board)
-#puts chess.move_gen([]).count
