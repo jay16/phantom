@@ -1,9 +1,21 @@
 #encoding: utf-8
+class String
+  COLORS = {
+    :red => "\033[31m",
+    :green => "\033[32m",
+    :yellow => "\033[33m",
+    :blue => "\033[34m"
+  }
+  def colorize(color)
+    "#{COLORS[color]}#{self}\033[0m"
+  end
+end
 
 class TriangleChess
   HH = %w[~ ! @ # $ % ^ & * ? : - + = _ | \ { } < >]
   CONTINUE_MAX = 3
-  attr_accessor :board, :step_record, :best_step, :human_map, :piece_map
+  COLORS = %w[red green yellow blue]
+  attr_accessor :board, :step_record, :best_step, :human_map, :piece_map, :board_width
 
   def initialize(board_width = 3)
     @piece_map    = []
@@ -52,7 +64,7 @@ class TriangleChess
   #[3,0] [3,2] [3,4] [3,6]
   def init_board(board = @board, x = 0, y = @board_width - 1, level = 1)
     _board = _copy_array(board)
-    x.upto(@board_width - 1).each_with_index do |_x, _index|
+    x.upto(@board_width - 1).each do |_x|
       _y = x + y - _x
       _board[_x][_y] = @human_map.count
       @human_map[@human_map.count.to_s] = [_x, _y]
@@ -69,17 +81,28 @@ class TriangleChess
   def print_board(board = @board)
     puts "=" * @board.length * 2
     board.to_a.each_with_index do |row, index| 
-      puts row.join(" ") + " " * 8 + print_step_info(index)
+      printf("%s", row.join(" ") + " " * @board_width * 3 + print_step_info(index))
+    end
+
+    if @step_record.count > board.count
+      board.count.upto(@step_record.count-1).each do |index|
+        printf("%s", board.last.join(" ") + " " * @board_width * 3 + print_step_info(index))
+      end
     end
   end
 
   def print_step_info(index)
     if not @step_record.empty? and index <= @step_record.length - 1
-      "step#{index}: #{HH[index]}"
-    end || ""
+      color = get_color(index)
+      "step#{index+1}: " + "#{HH[index]}".colorize(color) + "\n"
+    end || "\n"
   end
 
-  def _is_piece_available(board = @board, piece)
+  def get_color(index)
+    COLORS.at(index % COLORS.count).to_sym
+  end
+
+  def _is_piece_available?(board = @board, piece)
     x, y = *piece
     board[x][y].is_a?(Fixnum)
   end
@@ -101,46 +124,48 @@ class TriangleChess
   #   [2,1] [2,3] [2,5]
   #[3,0] [3,2] [3,4] [3,6]
   #
-  def move_gen(gen, board = @board, index = 0)
+  def move_gen(gen = [], board = @board, index = 0)
     _board = _copy_array(board)
     _piece_available = @piece_map - @piece_used
     _piece = _piece_available.at(index)
     x, y   = *_piece
+    _gen = []
 
     # left-down
-    _gen1 = []
     # [0,3] -> [1,2] -> [2,1] -> [3,0]
     x.upto(@board_width - 1).each do |_x|
       _piece = [_x, x + y - _x]
-      break if not _is_piece_available(_board, _piece)
+      break if not _is_piece_available?(_board, _piece)
 
-      _push_gen(_gen1, _piece) 
+      _push_gen(_gen, _piece) 
     end
+    gen += _gen
 
     # horizontal
-    _gen2 = []
     # [3, 0] -> [3, 2] -> [3, 4] -> [3, 6]
-    y.upto(@board_width * 2).each do |_y|
+    _gen.clear
+    (y..@board_width * 2).step(2) do |_y|
       _piece = [x, _y]
-      break if not _is_piece_available(_board, _piece)
+      break if not _is_piece_available?(_board, _piece)
 
-      _push_gen(_gen2, _piece) 
+      _push_gen(_gen, _piece) 
     end
+    gen += _gen
 
     # right-down
-    _gen3 = []
     # [0,3] -> [1,4] -> [2,5] -> [3,6]
+    _gen.clear
     x.upto(@board_width).each do |_x|
       _piece = [_x, y - x + _x]
-      break if not _is_piece_available(_board, _piece)
+      break if not _is_piece_available?(_board, _piece)
 
-      _push_gen(_gen3, _piece) 
+      _push_gen(_gen, _piece) 
     end
+    gen += _gen
 
-    gen = (gen + _gen1 + _gen2 + _gen3).uniq
 
     if _piece_available.empty? or index == _piece_available.count - 1
-      return gen
+      return gen.uniq
     else
       move_gen(gen, _board,index + 1)
     end
@@ -167,23 +192,21 @@ class TriangleChess
       board = _copy_array(_board)
     end
 
-    if level.even?
+    if level.odd?
       max = scores.max
-      scores.each_with_index do |score, index|
-        if level == 0 and score == max
-          @best_step = steps[index]#.map { |item| item.reverse! }
-          break
-        end
+      if level.zero?
+        _index = scores.index(max)
+        @best_step = steps[_index]
       end
+
       return max
     else
       min = scores.min
-      scores.each_with_index do |score, index|
-        if level == 0 and score == min
-          @best_step = steps[index]#.map { |item| item.reverse! }
-          break
-        end
+      if level.zero?
+        _index = scores.index(min)
+        @best_step = steps[_index]
       end
+
       return min
     end
   end
@@ -197,35 +220,88 @@ class TriangleChess
     end
   end
 
-  def check_step_available(input)
-    step = []
-    if input.strip.empty?
+  def _check_step_available(step, input)
+    if step.empty?
       warn "WARNGIN: please input your step!"
-    end
-
-    _steps = input.split(/\s/).uniq
-    if _steps.length > 3
-      warn "WARNING: steps maxinum is 3"
+      return false
+    elsif step.count > 3
+      warn "WARNING: every step maxinum piece is 3, your [#{input}] is #{step.count}"
+      return false
+    elsif step.count == 1
+      if not _is_piece_available?(@board, step.first)
+        warn "WARNING: the piece [#{input}] already taken!"
+        return false
+      end
     else
-      _steps.each do |human|
-        if human.to_i <= @human_map.count - 1
-          piece = @human_map[human]
-          x, y = *piece
-          if @board[x][y].is_a?(Fixnum)
-            step.push(piece)
-          else
-            warn "WARNING: [#{human}] already take!"
-            break
-          end
-        else
-          warn "WARNING: [#{human}] not available!"
+      _is_all_available = true
+      step.each do |piece|
+        if not _is_piece_available?(@board, step.first)
+          _is_all_available = false
+          warn "WARNING: are you sure [#{input}] all available!"
           break
         end
       end
-    end
+      return false if not _is_all_available
 
-    step.each do |piece|
-      # check is on line
+      _is_continue = true
+      step.sort_by! { |piece| piece[0] }
+      _first, _second, _latest, _orient = [], [], [], -1
+      #_orient: 0 - horization, 1 - left_down, 2 - right_down
+      step.each_with_index do |piece, index|
+        if index == 0
+          _first = piece
+        elsif index == 1
+          _second = piece
+          if _first[0] == _second[0]
+            _orient = 0
+          elsif _first[0] + _first[1] == _second[0] + _second[1] and _first[0] + 1 == _second[0]
+            _orient = 1
+          elsif _first[0] - _first[1] == _second[0] - _second[1] and _first[0] + 1 == _second[0]
+            _orient = 2
+          else
+            _is_continue = false
+          end
+        elsif index > 1
+          if _orient == 0
+            unless (piece[0] == _latest[0] and piece[1] == _latest[1] + 2)
+              _is_continue = false
+            end
+          elsif _orient == 1
+            unless (piece[0] == _latest[0] + 1 and  piece[0] + piece[1] == _latest[0] + _latest[1])
+              _is_continue = false
+            end
+          elsif _orient == 2
+            unless (piece[0] == _latest[0] + 1 and  piece[0] - piece[1] == _latest[0] - _latest[1])
+              _is_continue = false
+            end
+          end
+        end
+        if not _is_continue
+          warn "WARNGIN: are you sure [#{input}] in a line!"
+          break 
+        end
+
+        _latest = _copy_array(piece)
+      end
+      return _is_continue
+    end
+    return true
+  end
+  def check_step_available(input)
+    step   = []
+    _is_all_human_map = true
+    input.strip.split(/\s/).uniq.each do |human|
+      if human.to_i <= @human_map.count - 1
+        piece = @human_map[human]
+        step.push(piece)
+      else
+        warn "WARNING: [#{human}] is a dirty piece!"
+        _is_all_human_map = false
+        break
+      end
+    end
+    unless (_is_all_human_map and _check_step_available(step, input))
+      step.clear
     end
     return step
   end

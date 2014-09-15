@@ -2,12 +2,13 @@
 require "./triangle_chess.rb"
 
 chess = TriangleChess.new(5)
+#chess.print_board
+#puts chess.human_map
+#puts chess.move_gen.map { |row| row.to_s }.join("\n")
 puts "初始化棋盘:"
 chess.print_board
 loop do
   count = chess.step_record.count
-  puts "count:#{count}"
-
   if count.odd?
     puts "机器人走法:"
 
