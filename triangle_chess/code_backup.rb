@@ -1,6 +1,8 @@
     board.to_a.each_with_index do |row, index| 
       row.each do |hpiece|
         if hpiece.is_a?(Fixnum)
+          printf("%s", hpiece)
+        elsif HH.include?(hpiece)
           piece = @human_map[hpiece.to_s]
           _index = -1
           @step_record.each_with_index do |_step, o_index|
@@ -12,12 +14,11 @@
             end
             break if _index >= 0
           end
-          color = get_color(_index)
+          color = _get_color(_index)
           printf("%s", hpiece.to_s.colorize(color))
         else
-          printf("%s", hpiece)
+          printf("%s", " ")
         end
       end
       printf("%s", print_step_info(index))
-
     end
