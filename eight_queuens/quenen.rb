@@ -5,7 +5,7 @@ EMPTY  = ' '
 OCCUPY = '-'
 @nCount = 0
 
-# ´òÓ¡ÆåÅÌ
+# æ‰“å°æ£‹ç›˜
 def print_board(board)
   @nCount += 1
 
@@ -13,65 +13,65 @@ def print_board(board)
   puts board.map { |row| row.join(' ') }.join("\n")
 end
 
-# ±¸·İÆåÅÌ
+# å¤‡ä»½æ£‹ç›˜
 def copy_board(board)
   Marshal.load(Marshal.dump(board))
 end
 
-# Ö÷³ÌĞò
+# ä¸»ç¨‹åº
 def quenen(board, row)
-  # ÅĞ¶ÏÆåÅÌÎ»ÖÃÊÇ·ñÔ½½ç
+  # åˆ¤æ–­æ£‹ç›˜ä½ç½®æ˜¯å¦è¶Šç•Œ
   return if row < 0 or row >= MAX
 
-  # ±¸·İÆåÅÌ
+  # å¤‡ä»½æ£‹ç›˜
   _board = copy_board(board)
 
-  # ±éÀúrowĞĞËùÔÚÁĞÊı¾İ
+  # éå†rowè¡Œæ‰€åœ¨åˆ—æ•°æ®
   for i in (0...MAX)
-    # board[row][i] ²»Îª¿Õ£¬ÔòÌø¹ı
+    # board[row][i] ä¸ä¸ºç©ºï¼Œåˆ™è·³è¿‡
     next if board[row][i] != EMPTY
 
-    # ×ßµ½ÕâÀï£¬ËµÃ÷¸ÃÎ»ÖÃÎª¿Õ£¬·ÅÖÃquenen
+    # èµ°åˆ°è¿™é‡Œï¼Œè¯´æ˜è¯¥ä½ç½®ä¸ºç©ºï¼Œæ”¾ç½®quenen
     board[row][i] = STAND
 
-    # quenen - board[row][i]ËùÊôÇøÓò
+    # quenen - board[row][i]æ‰€å±åŒºåŸŸ
     for j in (0...MAX)
       for k in (0...MAX)
-        # ²»ÊÇ¿ÕµÄ£¬¿ÉÄÜÊÇquenenÎ»ÖÃ£¬¿Ï¶¨²»ÊÇboard[row][i]µÄËùÊôÇøÓò
+        # ä¸æ˜¯ç©ºçš„ï¼Œå¯èƒ½æ˜¯quenenä½ç½®ï¼Œè‚¯å®šä¸æ˜¯board[row][i]çš„æ‰€å±åŒºåŸŸ
         next if board[j][k] != EMPTY
 
-        # quenenËùÔÚĞĞ
+        # quenenæ‰€åœ¨è¡Œ
         if j == row
           board[j][k] = OCCUPY
-        # quenenËùÔÚÁĞ
+        # quenenæ‰€åœ¨åˆ—
         elsif k == i
           board[j][k] = OCCUPY
-        # quenenËùÔÚµã¶«±±/Î÷ÄÏÏß
+        # quenenæ‰€åœ¨ç‚¹ä¸œåŒ—/è¥¿å—çº¿
         elsif row + i == j + k
           board[j][k] = OCCUPY
-        # quenenËùÔÚµã¶«ÄÏ/Î÷±±Ïß
+        # quenenæ‰€åœ¨ç‚¹ä¸œå—/è¥¿åŒ—çº¿
         elsif row - i == j - k
           board[j][k] = OCCUPY
         end
       end
     end
 
-    # ×îµ½ÆåÅÌ×îºóÒ»ĞĞ
-    # ´ÓÄÇÀï¿ÉÒÔÂÛÖ¤Ã¿ĞĞ¿ÉÒÔ·ÅÖÃÒ»¸öquenen?
+    # æœ€åˆ°æ£‹ç›˜æœ€åä¸€è¡Œ
+    # ä»é‚£é‡Œå¯ä»¥è®ºè¯æ¯è¡Œå¯ä»¥æ”¾ç½®ä¸€ä¸ªquenen?
     if row == MAX - 1
       print_board(board)
     else
-      # ¼ÌĞø±éÀúÏÂÒ»ĞĞ
+      # ç»§ç»­éå†ä¸‹ä¸€è¡Œ
       quenen(board, row + 1)
     end
 
-    # »ØËİ£¬»¹Ô­ÆåÅÌ
+    # å›æº¯ï¼Œè¿˜åŸæ£‹ç›˜
     board = copy_board(_board)
   end
 end
 
-# ³õÊ¼»¯ÆåÅÌ
+# åˆå§‹åŒ–æ£‹ç›˜
 board = Array.new(MAX){ Array.new(MAX, EMPTY) }
-# ´ÓµÚÒ»ĞĞ¿ªÊ¼
+# ä»ç¬¬ä¸€è¡Œå¼€å§‹
 quenen(board, 0)
 
