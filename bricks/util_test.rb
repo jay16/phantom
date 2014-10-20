@@ -1,14 +1,27 @@
 #encoding: utf-8
 require "./shapes.rb"
-require "./function.rb"
 require 'minitest/spec'
 require "minitest/autorun"
 
-describe "bricks" do
+describe "通用代码" do
+  it "多维数据/哈希复制" do
+    array = [
+      [1,2,3,4,5,6],
+      [7,8,9,0,2,1]
+    ]
+    hash = {
+      "one" => {
+        "tow" => "three"
+      }
+    }
+    assert_equal array, copy_obj(array)
+    assert_equal hash, copy_obj(hash)
+  end
+
   def all_blank_points(board)
     points = []
-    for i in (0..@BD-1)
-      for j in (0..@BW-1)
+    for i in (0..BD-1)
+      for j in (0..BW-1)
         points.push([i, j]) if board[i][j] == 0
       end
     end
@@ -17,14 +30,12 @@ describe "bricks" do
 
   describe "计算连续空白块, 由左至右递归" do
     before do
-      @LEN = 5 # brick length
-      @BW  = 5 # board width
-      @BD  = 3 # board depth
       @count = 0
-      @step  = 0
+      BW  = 5 if not defined? BW # board width
+      BD  = 3 if not defined? BD # board depth
     end
     it "空白的拼盘应该返回它自己" do
-      board = Array.new(@BD) { Array.new(@BW, 0) }
+      board = Array.new(BD) { Array.new(BW, 0) }
       blank_points = caculate_blank_points(board)
       all_points = all_blank_points(board)
       
@@ -42,6 +53,7 @@ describe "bricks" do
       assert_equal 1, blank_points.size
       assert_equal all_blank_points(board).sort, blank_points.first.sort
     end
+
     it "内陷" do
       board = [
         [1, 1, 1, 1, 1],

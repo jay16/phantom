@@ -17,7 +17,6 @@ describe "bricks" do
       board_3x5  = Array.new(3) { Array.new(5, 1) }
       board_3x15 = Array.new(3) { Array.new(10, 0) }
       board = _concate_array(board_3x5, board_3x15)
-      print_array(board)
     end
   end
 end

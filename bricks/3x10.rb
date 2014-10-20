@@ -47,7 +47,7 @@ end
 
 def uniq_array(boards)
   _all, _uniq = [], []
-  copy_array(boards).each do |board|
+  copy_obj(boards).each do |board|
     next if _all.include?(board)
     _uniq.push(board)
 
